@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %} Login {% endblock %}
+
+{% block nav %}
+    <a href="/login" class="active"> Login </a>
+    <a href="/signup"> Sign up </a>
+{% endblock %}
+
+{% block body %}
+    <div class="centre form-box">
+        <form>
+            <h3>Login:</h3>
+            <input type="text" name="username" placeholder="Username"/><br>
+            <input type="password" name="password" placeholder="Password"/><br>
+        </form>
+    </div>
+{% endblock%}

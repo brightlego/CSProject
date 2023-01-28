@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %} Graphite {% endblock %}
+
+{% block nav %}
+    <a href="/calculator" class="active"> Calculator </a>
+    <a href="/saved-graphs"> Saved Graphs </a>
+{% endblock %}
+
+{% block body %}
+    <div style="height: 85vh; width: 100vw">
+        <div class="left form-box">
+            <form>
+                <input type="submit"/>
+                <textarea name="raw_text">{{ raw_text }}</textarea>
+            </form>
+        </div>
+        <div class="right image-box">
+          <img src="/static/{{ image_location }}" alt="Unable to plot graph"/>
+        </div>
+    </div>
+{% endblock%}
