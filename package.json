@@ -1,0 +1,15 @@
+{
+  "name": "csproject",
+  "version": "0.0.0",
+  "description": "A graphical calculator",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "John Ellis",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^22.1.0"
+  }
+}
