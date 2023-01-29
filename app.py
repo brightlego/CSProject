@@ -20,9 +20,15 @@ def signup():
     return flask.render_template('signup.html')
 
 
-@app.route('/calculator')
+@app.route('/calculator', methods=['GET', 'POST'])
 def calculator():
-    return flask.render_template('calculator.html', raw_text="", image_location="test.png")
+    raw_text = ""
+    print(flask.request.method)
+    if flask.request.method == 'POST':
+        raw_text = flask.request.form.get('raw_text')
+        print(raw_text)
+
+    return flask.render_template('calculator.html', raw_text=f"'{raw_text}' was received", image_location="test.png")
 
 
 @app.route('/saved-graphs')
