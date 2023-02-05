@@ -3,8 +3,12 @@ INFIX_BINARY_SCORE = {'=': 0, '<': 1, '>': 1, '<=': 1, '>=': 1, '!=': 1, '=>': 2
 
 POSTFIX_UNARY_SCORE = {'!': 40}
 
-PREFIX_UNARY_SCORE = {'-': 1100}
+PREFIX_UNARY_SCORE = {'negate': 100, 'ignore': 110}
+
+OPERATORS = list(INFIX_BINARY_SCORE.keys()) + list(POSTFIX_UNARY_SCORE.keys()) + list(PREFIX_UNARY_SCORE.keys())
 
 NON_ALPHA_IDENTIFIERS = ''
 START_BRACKETS = '([{'
 END_BRACKETS = ')]}'
+BRACKETS = START_BRACKETS + END_BRACKETS
+LINE_BREAK = [r'\\']

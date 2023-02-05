@@ -16,6 +16,7 @@ class Parser:
     def __init__(self, raw_text):
         self.raw_text = raw_text
         self.tokens = []
+        self.lines = []
         self.__curr_token = ""
 
     def tokenise(self):
@@ -26,10 +27,17 @@ class Parser:
 
         for char in self.raw_text:
             if char == '\\':
-                self.__add_token()
-                in_identifier = True
-                in_whitespace = False
-                in_number = False
+                if in_identifier:
+                    self.__curr_token = r"\\"
+                    self.__add_token()
+                    in_identifier = False
+                    in_whitespace = True
+                    in_number = False
+                else:
+                    self.__add_token()
+                    in_identifier = True
+                    in_whitespace = False
+                    in_number = False
 
             elif char.isspace():
                 if in_whitespace:
@@ -100,7 +108,7 @@ class Parser:
     @staticmethod
     def __is_number(string):
         if re.fullmatch(
-                r"-?([0-9]+|[0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([eE]-?[0-9]+)?",
+                r"[-+]?([0-9]+|[0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([eE]-?[0-9]+)?",
                 string):
             return True
         else:
@@ -112,12 +120,11 @@ class Parser:
         else:
             return False
 
-
-    def __get_operator_queue(self):
+    def __get_operator_queue(self, tokens):
         queue = PriorityQueue()
         bracket_level = 0
-        for i in range(len(self.tokens)):
-            token = self.tokens[i].item
+        for i in range(len(tokens)):
+            token = tokens[i].item
             score = (bracket_level, -1, -i)
 
             if token in builtin_operators.START_BRACKETS:
@@ -133,57 +140,90 @@ class Parser:
             else:
                 score = (bracket_level, 0, -i)
 
-            queue.insert(self.tokens[i], score)
+            queue.insert(tokens[i], score)
         return queue
 
+    def negate(self):
+        for i in range(len(self.tokens)):
+            if (i == 0
+                    or self.tokens[i - 1].item in builtin_operators.START_BRACKETS
+                    or self.tokens[i - 1].item in builtin_operators.OPERATORS
+                    or self.tokens[i - 1].item in builtin_operators.LINE_BREAK):
+                if self.tokens[i].item == '-':
+                    self.tokens[i].item = 'negate'
+                elif self.tokens[i].item == '+':
+                    self.tokens[i].item = 'ignore'
+
+    def break_lines(self):
+        self.lines = [[]]
+        for token in self.tokens:
+            if token.item in builtin_operators.LINE_BREAK:
+                self.lines.append([])
+            else:
+                self.lines[-1].append(token)
+
+    @staticmethod
+    def __get_preblock(index, tokens):
+        pre_block_index = index - 1
+        bracket_level = 0
+        while (bracket_level > 0 or (
+                tokens[pre_block_index].item not in builtin_operators.INFIX_BINARY_SCORE
+                and tokens[pre_block_index].item not in builtin_operators.START_BRACKETS)
+        ):
+            if tokens[pre_block_index].item in builtin_operators.END_BRACKETS:
+                bracket_level += 1
+            elif tokens[pre_block_index].item in builtin_operators.START_BRACKETS:
+                bracket_level -= 1
+            pre_block_index -= 1
+
+        pre_block_index += 1
+
+        return pre_block_index
+
+    @staticmethod
+    def __get_postblock(index, tokens):
+        bracket_level = 0
+        post_block_index = index + 1
+        while (bracket_level > 0 or (
+                tokens[post_block_index].item not in builtin_operators.INFIX_BINARY_SCORE
+                and tokens[post_block_index].item not in builtin_operators.END_BRACKETS)
+        ):
+            if tokens[post_block_index].item in builtin_operators.END_BRACKETS:
+                bracket_level -= 1
+            elif tokens[post_block_index].item in builtin_operators.START_BRACKETS:
+                bracket_level += 1
+            post_block_index += 1
+
+        return post_block_index
+
     def reformat(self):
-        queue = self.__get_operator_queue()
-        self.tokens.insert(0, self.__Token('('))
-        self.tokens.append(self.__Token(')'))
-        while not queue.is_empty():
-            token = queue.extract_max()
-            index = self.tokens.index(token)
-            if token.item in builtin_operators.INFIX_BINARY_SCORE:
-                pre_block_index = index - 1
-                bracket_level = 0
-                while (bracket_level > 0 or (
-                        self.tokens[pre_block_index].item not in builtin_operators.INFIX_BINARY_SCORE
-                        and self.tokens[pre_block_index].item not in builtin_operators.START_BRACKETS)
-                ):
-                    if self.tokens[pre_block_index].item in builtin_operators.END_BRACKETS:
-                        bracket_level += 1
-                    elif self.tokens[pre_block_index].item in builtin_operators.START_BRACKETS:
-                        bracket_level -= 1
-                    pre_block_index -= 1
+        for tokens in self.lines:
+            queue = self.__get_operator_queue(tokens)
+            tokens.insert(0, self.__Token('('))
+            tokens.append(self.__Token(')'))
+            while not queue.is_empty():
+                token = queue.extract_max()
+                index = tokens.index(token)
+                if token.item in builtin_operators.INFIX_BINARY_SCORE:
+                    pre_block_index = self.__get_preblock(index, tokens)
+                    post_block_index = self.__get_postblock(index, tokens)
 
-                pre_block_index += 1
+                    tokens[index] = self.__Token(')')  # End of partial application
+                    tokens.insert(post_block_index, self.__Token(')'))  # End of full application
 
-                bracket_level = 0
-                post_block_index = index + 1
-                while (bracket_level > 0 or (
-                        self.tokens[post_block_index].item not in builtin_operators.INFIX_BINARY_SCORE
-                        and self.tokens[post_block_index].item not in builtin_operators.END_BRACKETS)
-                ):
-                    if self.tokens[post_block_index].item in builtin_operators.END_BRACKETS:
-                        bracket_level -= 1
-                    elif self.tokens[post_block_index].item in builtin_operators.START_BRACKETS:
-                        bracket_level += 1
-                    post_block_index += 1
+                    tokens.insert(pre_block_index, token)
+                    tokens.insert(pre_block_index, self.__Token('('))  # Start of partial application
+                    tokens.insert(pre_block_index, self.__Token('('))  # Start of full application
+                elif token.item in builtin_operators.POSTFIX_UNARY_SCORE:
+                    pre_block_index = self.__get_preblock(index, tokens)
+                    tokens.insert(index, self.__Token(')'))  # Application end
 
-                self.tokens[index] = self.__Token(')')   # End of partial application
-
-                self.tokens.insert(post_block_index, self.__Token(')'))  # End of post-block
-                self.tokens.insert(post_block_index, self.__Token(')'))  # End of full application
-
-                self.tokens.insert(index + 1, self.__Token('('))  # Start of post-block
-                self.tokens.insert(index, self.__Token(')'))  # End of pre-block
-
-                self.tokens.insert(pre_block_index,  self.__Token('('))  # Bracket for pre-block
-                self.tokens.insert(pre_block_index, token)
-                self.tokens.insert(pre_block_index,  self.__Token('('))  # Bracket for partial application
-                self.tokens.insert(pre_block_index,  self.__Token('('))  # Bracket for full application
-
-
+                    tokens.insert(pre_block_index, token)
+                    tokens.insert(pre_block_index, self.__Token('('))  # Application start
+                elif token.item not in builtin_operators.BRACKETS:
+                    post_block_index = self.__get_postblock(index, tokens)
+                    tokens.insert(post_block_index, self.__Token(')'))  # End of application
+                    tokens.insert(index, self.__Token('('))  # Start of application
 
 
 class PriorityQueue:
@@ -208,13 +248,13 @@ class PriorityQueue:
             del self.__heap[self.n]
             self.n -= 1
             i = 1
-            while (i<<1)|1 <= self.n and (self.__heap[i][0] < self.__heap[i<<1][0]
-                                          or self.__heap[i][0] < self.__heap[(i<<1)|1][0]):
-                if self.__heap[i<<1][0] > self.__heap[(i<<1)|1][0]:
-                    swap(self.__heap, i, i<<1)
+            while (i << 1) | 1 <= self.n and (self.__heap[i][0] < self.__heap[i << 1][0]
+                                              or self.__heap[i][0] < self.__heap[(i << 1) | 1][0]):
+                if self.__heap[i << 1][0] > self.__heap[(i << 1) | 1][0]:
+                    swap(self.__heap, i, i << 1)
                     i <<= 1
                 else:
-                    swap(self.__heap, i, (i<<1)|1)
+                    swap(self.__heap, i, (i << 1) | 1)
                     i <<= 1
                     i |= 1
 
@@ -231,11 +271,13 @@ class PriorityQueue:
 
 
 def test():
-    parser = Parser(r"""\sin(90) + \exp(5) + 3^2""")
+    parser = Parser(r"""\let x = 1 \\ \\ 2x""")
     parser.tokenise()
     print(parser.tokens)
+    parser.negate()
+    parser.break_lines()
     parser.reformat()
-    print(parser.tokens)
+    print(parser.lines)
 
 
 def swap(arr, i, j):
