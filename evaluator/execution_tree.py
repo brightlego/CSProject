@@ -101,6 +101,23 @@ class ExecutionTree:
         def is_function_call(self):
             return True
 
+    class __FunctionDef(__Node):
+        def __init__(self, identifier):
+            self.identifier = identifier
+            self.expr = None
+            super().__init__()
+
+        def set_expr(self, expr):
+            self.expr = expr
+            self.add_child(self.expr)
+
+        def __repr__(self):
+            return f"λ{self.identifier}.{self.expr}"
+
+        def __iter__(self):
+            yield self
+            yield from self.expr
+
     def __set_root(self, root):
         self.__root = root
 
@@ -128,6 +145,12 @@ class ExecutionTree:
         if self.__root is None:
             self.__set_root(node)
         return node
+
+    def create_function_def(self, identifier):
+        node = ExecutionTree.__FunctionDef(identifier)
+        self.nodes.add(node)
+        return node
+
 
     def print_tree(self, node=None):
         print(self.__root)
