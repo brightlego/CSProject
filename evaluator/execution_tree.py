@@ -1,4 +1,5 @@
-import local
+import evaluator.local
+
 
 class ExecutionTree:
     def __init__(self):
@@ -16,6 +17,12 @@ class ExecutionTree:
 
         def get_var(self, identifier):
             return self.locals.get_var(identifier)
+
+        def del_var(self, identifier):
+            self.locals.del_var(identifier)
+
+        def set_var(self, identifier, value):
+            self.locals.set_var(identifier, value)
 
         def get_parent(self):
             return self.parent
@@ -39,6 +46,9 @@ class ExecutionTree:
             return False
 
         def is_identifier(self):
+            return False
+
+        def is_funcdef(self):
             return False
 
         def is_root(self):
@@ -118,6 +128,17 @@ class ExecutionTree:
             yield self
             yield from self.expr
 
+        def set_locals(self, locals_):
+            super().set_locals(locals_)
+            self.locals.set_var(self.identifier.name.item, None)
+
+        def apply(self, value):
+            self.locals.set_var(self.identifier.name.item, value)
+            return self.expr
+
+        def is_funcdef(self):
+            return True
+
     def __set_root(self, root):
         self.__root = root
 
@@ -126,7 +147,7 @@ class ExecutionTree:
             if node.is_root():
                 node.set_locals(globals_)
             else:
-                locals_ = local.Locals()
+                locals_ = evaluator.local.Locals()
                 locals_.set_node(node)
 
     def get_root(self):

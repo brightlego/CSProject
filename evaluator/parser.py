@@ -1,6 +1,6 @@
 import re
-import operators
-import execution_tree
+import evaluator.operators
+import evaluator.execution_tree
 
 
 class Parser:
@@ -76,7 +76,7 @@ class Parser:
                     in_number = False
 
             elif in_identifier:
-                if char.isalnum() or char in operators.NON_ALPHA_IDENTIFIERS:
+                if char.isalnum() or char in evaluator.operators.NON_ALPHA_IDENTIFIERS:
                     self.__curr_token += char
                 else:
                     self.__add_token()
@@ -122,7 +122,7 @@ class Parser:
 
     @staticmethod
     def __is_number(string):
-        if re.fullmatch(operators.VALID_NUMBER_REGEX, string):
+        if re.fullmatch(evaluator.operators.VALID_NUMBER_REGEX, string):
             return True
         else:
             return False
@@ -141,16 +141,16 @@ class Parser:
             token = tokens[i].item
             score = (bracket_level, -1, -i)
 
-            if token in operators.START_BRACKETS:
+            if token in evaluator.operators.START_BRACKETS:
                 bracket_level += 1
-            elif token in operators.END_BRACKETS:
+            elif token in evaluator.operators.END_BRACKETS:
                 bracket_level -= 1
-            elif token in operators.INFIX_BINARY_SCORE:
-                score = (bracket_level, operators.INFIX_BINARY_SCORE[token], -i)
-            elif token in operators.POSTFIX_UNARY_SCORE:
-                score = (bracket_level, operators.POSTFIX_UNARY_SCORE[token], -i)
-            elif token in operators.PREFIX_UNARY_SCORE:
-                score = (bracket_level, operators.PREFIX_UNARY_SCORE[token], -i)
+            elif token in evaluator.operators.INFIX_BINARY_SCORE:
+                score = (bracket_level, evaluator.operators.INFIX_BINARY_SCORE[token], -i)
+            elif token in evaluator.operators.POSTFIX_UNARY_SCORE:
+                score = (bracket_level, evaluator.operators.POSTFIX_UNARY_SCORE[token], -i)
+            elif token in evaluator.operators.PREFIX_UNARY_SCORE:
+                score = (bracket_level, evaluator.operators.PREFIX_UNARY_SCORE[token], -i)
             else:
                 score = (bracket_level, 0, -i)
 
@@ -160,9 +160,9 @@ class Parser:
     def __negate(self):
         for i in range(len(self.tokens)):
             if (i == 0
-                    or self.tokens[i - 1].item in operators.START_BRACKETS
-                    or self.tokens[i - 1].item in operators.OPERATORS
-                    or self.tokens[i - 1].item in operators.LINE_BREAK):
+                    or self.tokens[i - 1].item in evaluator.operators.START_BRACKETS
+                    or self.tokens[i - 1].item in evaluator.operators.OPERATORS
+                    or self.tokens[i - 1].item in evaluator.operators.LINE_BREAK):
                 if self.tokens[i].item == '-':
                     self.tokens[i].item = 'negate'
                 elif self.tokens[i].item == '+':
@@ -171,7 +171,7 @@ class Parser:
     def __break_lines(self):
         self.lines = [[]]
         for token in self.tokens:
-            if token.item in operators.LINE_BREAK:
+            if token.item in evaluator.operators.LINE_BREAK:
                 self.lines.append([])
             else:
                 self.lines[-1].append(token)
@@ -181,12 +181,12 @@ class Parser:
         pre_block_index = index - 1
         bracket_level = 0
         while (bracket_level > 0 or (
-                tokens[pre_block_index].item not in operators.INFIX_BINARY_SCORE
-                and tokens[pre_block_index].item not in operators.START_BRACKETS)
+                tokens[pre_block_index].item not in evaluator.operators.INFIX_BINARY_SCORE
+                and tokens[pre_block_index].item not in evaluator.operators.START_BRACKETS)
         ):
-            if tokens[pre_block_index].item in operators.END_BRACKETS:
+            if tokens[pre_block_index].item in evaluator.operators.END_BRACKETS:
                 bracket_level += 1
-            elif tokens[pre_block_index].item in operators.START_BRACKETS:
+            elif tokens[pre_block_index].item in evaluator.operators.START_BRACKETS:
                 bracket_level -= 1
             pre_block_index -= 1
 
@@ -199,12 +199,12 @@ class Parser:
         bracket_level = 0
         post_block_index = index + 1
         while (bracket_level > 0 or (
-                tokens[post_block_index].item not in operators.INFIX_BINARY_SCORE
-                and tokens[post_block_index].item not in operators.END_BRACKETS)
+                tokens[post_block_index].item not in evaluator.operators.INFIX_BINARY_SCORE
+                and tokens[post_block_index].item not in evaluator.operators.END_BRACKETS)
         ):
-            if tokens[post_block_index].item in operators.END_BRACKETS:
+            if tokens[post_block_index].item in evaluator.operators.END_BRACKETS:
                 bracket_level -= 1
-            elif tokens[post_block_index].item in operators.START_BRACKETS:
+            elif tokens[post_block_index].item in evaluator.operators.START_BRACKETS:
                 bracket_level += 1
             post_block_index += 1
 
@@ -218,7 +218,7 @@ class Parser:
             while not queue.is_empty():
                 token = queue.extract_max()
                 index = tokens.index(token)
-                if token.item in operators.INFIX_BINARY_SCORE:
+                if token.item in evaluator.operators.INFIX_BINARY_SCORE:
                     pre_block_index = self.__get_preblock(index, tokens)
                     post_block_index = self.__get_postblock(index, tokens)
 
@@ -228,20 +228,20 @@ class Parser:
                     tokens.insert(pre_block_index, token)
                     tokens.insert(pre_block_index, self.__Token('('))  # Start of partial application
                     tokens.insert(pre_block_index, self.__Token('('))  # Start of full application
-                elif token.item in operators.POSTFIX_UNARY_SCORE:
+                elif token.item in evaluator.operators.POSTFIX_UNARY_SCORE:
                     pre_block_index = self.__get_preblock(index, tokens)
                     tokens.insert(index, self.__Token(')'))  # Application end
 
                     tokens.insert(pre_block_index, token)
                     tokens.insert(pre_block_index, self.__Token('('))  # Application start
-                elif token.item not in operators.BRACKETS:
+                elif token.item not in evaluator.operators.BRACKETS:
                     post_block_index = self.__get_postblock(index, tokens)
                     tokens.insert(post_block_index, self.__Token(')'))  # End of application
                     tokens.insert(index, self.__Token('('))  # Start of application
 
     def __create_expression_tree(self):
         for tokens in self.lines:
-            tree = execution_tree.ExecutionTree()
+            tree = evaluator.execution_tree.ExecutionTree()
             root = tree.create_function_call()
             assert root is tree.get_root()
             self.__recurse_create_tree(tree, root, iter(tokens))
@@ -251,11 +251,11 @@ class Parser:
     def __recurse_create_tree(self, tree, parent, iterator):
         children = []
         for token in iterator:
-            if token.item in operators.START_BRACKETS:
+            if token.item in evaluator.operators.START_BRACKETS:
                 child = tree.create_function_call()
                 self.__recurse_create_tree(tree, child, iterator)
                 children.append(child)
-            elif token.item in operators.END_BRACKETS:
+            elif token.item in evaluator.operators.END_BRACKETS:
                 break
             else:
                 child = tree.create_identifier(token)

@@ -10,6 +10,9 @@ class Locals:
             if not self.node.is_root():
                 return self.node.get_parent().get_var(identifier)
 
+    def del_var(self, identifier):
+        del self.vars[identifier]
+
     def set_node(self, node):
         self.node = node
         node.set_locals(self)

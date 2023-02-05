@@ -15,6 +15,9 @@ class Number(Function):
         if isinstance(parameter, Number):
             return Number(self.value * parameter.value)
 
+    def __repr__(self):
+        return f"{self.value}"
+
 
 class Builtin(Function):
     def __init__(self, func):
@@ -23,3 +26,6 @@ class Builtin(Function):
 
     def apply(self, parameter):
         return self.func(parameter)
+
+    def __repr__(self):
+        return f"<Builtin {self.func.__name__}>"
