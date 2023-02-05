@@ -12,17 +12,40 @@ class ExecutionTree:
             self.children = set()
 
         def add_child(self, child):
-            self.children.add(child)
-            child.set_parent(self)
+            if child is not None:
+                self.children.add(child)
+                child.set_parent(self)
+
+        def remove_child(self, child):
+            self.children.remove(child)
+            child.set_parent(None)
 
         def set_parent(self, parent):
             self.parent = parent
+
+        def __iter__(self):
+            yield self
+
+        def is_function_call(self):
+            return False
+
+        def is_identifier(self):
+            return False
 
     class __Identifier(__Node):
         def __init__(self, name):
             self.name = name
 
             super().__init__()
+
+        def __repr__(self):
+            return f"{self.name}"
+
+        def __iter__(self):
+            yield self
+
+        def is_identifier(self):
+            return True
 
     class __FunctionCall(__Node):
         def __init__(self):
@@ -38,6 +61,33 @@ class ExecutionTree:
         def add_parameter(self, parameter):
             self.parameter = parameter
             self.add_child(parameter)
+
+        def set_parameter(self, parameter):
+            old_parameter = self.parameter
+            if old_parameter is not None:
+                self.remove_child(old_parameter)
+                del old_parameter
+            self.add_parameter(parameter)
+
+        def set_function(self, function):
+            old_function = self.function
+            if old_function is not None:
+                self.remove_child(old_function)
+                del old_function
+            self.add_function(function)
+
+        def __repr__(self):
+            return f"({self.function} {self.parameter})"
+
+        def __iter__(self):
+            yield self
+            if self.function is not None:
+                yield from self.function
+            if self.parameter is not None:
+                yield from self.parameter
+
+        def is_function_call(self):
+            return True
 
     def __set_root(self, root):
         self.__root = root
@@ -60,20 +110,10 @@ class ExecutionTree:
         return node
 
     def print_tree(self, node=None):
-        if node is None:
-            node = self.__root
+        print(self.__root)
 
-        if isinstance(node, ExecutionTree.__FunctionCall):
-            print('(', end='')
-            if isinstance(node.function, ExecutionTree.__Identifier):
-                print('(', end='')
-            self.print_tree(node.function)
-            self.print_tree(node.parameter)
-        else:
-            print(f"{node.name}) ", end='')
-
-        if node is self.__root:
-            print("\b)")
+    def __iter__(self):
+        return iter(self.__root)
 
 
 def test():

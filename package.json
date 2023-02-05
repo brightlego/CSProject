@@ -1,6 +1,6 @@
 {
   "name": "csproject",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A graphical calculator",
   "main": "main.js",
   "scripts": {

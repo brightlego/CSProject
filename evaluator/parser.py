@@ -1,5 +1,6 @@
 import re
 import builtin_operators
+import execution_tree
 
 
 class Parser:
@@ -18,6 +19,7 @@ class Parser:
         self.tokens = []
         self.lines = []
         self.__curr_token = ""
+        self.trees = []
 
     def tokenise(self):
         self.__curr_token = ""
@@ -225,7 +227,57 @@ class Parser:
                     tokens.insert(post_block_index, self.__Token(')'))  # End of application
                     tokens.insert(index, self.__Token('('))  # Start of application
 
+    def create_expression_tree(self):
+        for tokens in self.lines:
+            tree = execution_tree.ExecutionTree()
+            root = tree.create_function_call()
+            assert root is tree.get_root()
+            self.__recurse_create_tree(tree, root, iter(tokens))
+            self.__compress_tree(tree)
+            self.trees.append(tree)
 
+    def __recurse_create_tree(self, tree, parent, iterator):
+        children = []
+        for token in iterator:
+            if token.item in builtin_operators.START_BRACKETS:
+                child = tree.create_function_call()
+                self.__recurse_create_tree(tree, child, iterator)
+                children.append(child)
+            elif token.item in builtin_operators.END_BRACKETS:
+                break
+            else:
+                child = tree.create_identifier(token)
+                children.append(child)
+        match len(children):
+            case 0:
+                raise ValueError('Empty brackets')
+            case 1:
+                parent.add_parameter(children[0])
+            case 2:
+                parent.add_function(children[0])
+                parent.add_parameter(children[1])
+            case n:
+                function = children[0]
+                parameter = children[1]
+                for i in range(2, n):
+                    node = tree.create_function_call()
+                    node.add_function(function)
+                    node.add_parameter(parameter)
+                    function = node
+                    parameter = children[i]
+                parent.add_function(function)
+                parent.add_parameter(parameter)
+
+    @staticmethod
+    def __compress_tree(tree):
+        for node in tree:
+            if node.is_function_call():
+                while node.parameter.is_function_call() and node.parameter.function is None:
+                    node.set_parameter(node.parameter.parameter)
+        root = tree.get_root()
+        if root.function is None:
+            root.set_function(root.parameter.function)
+            root.set_parameter(root.parameter.parameter)
 class PriorityQueue:
     def __init__(self):
         self.__heap = [(-1, None)]  # Heaps are best implemented using 1-indexed arrays
@@ -271,13 +323,15 @@ class PriorityQueue:
 
 
 def test():
-    parser = Parser(r"""\let x = 1 \\ \\ 2x""")
+    parser = Parser(r"""\let y = 2x \\ 3y - 2x = y""")
     parser.tokenise()
     print(parser.tokens)
     parser.negate()
     parser.break_lines()
     parser.reformat()
     print(parser.lines)
+    parser.create_expression_tree()
+    [tree.print_tree() for tree in parser.trees]
 
 
 def swap(arr, i, j):
