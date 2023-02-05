@@ -12,3 +12,5 @@ START_BRACKETS = '([{'
 END_BRACKETS = ')]}'
 BRACKETS = START_BRACKETS + END_BRACKETS
 LINE_BREAK = [r'\\']
+
+VALID_NUMBER_REGEX = r"[-+]?([0-9]+|[0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([eE]-?[0-9]+)?"

@@ -1,6 +1,3 @@
-from typing import Union
-
-
 class ExecutionTree:
     def __init__(self):
         self.__root = None
@@ -10,6 +7,16 @@ class ExecutionTree:
         def __init__(self):
             self.parent = None
             self.children = set()
+            self.locals = None
+
+        def set_locals(self, locals):
+            self.locals = locals
+
+        def get_var(self, identifier):
+            return self.locals.get_var(identifier)
+
+        def get_parent(self):
+            return self.parent
 
         def add_child(self, child):
             if child is not None:
@@ -31,6 +38,9 @@ class ExecutionTree:
 
         def is_identifier(self):
             return False
+
+        def is_root(self):
+            return self.parent is None
 
     class __Identifier(__Node):
         def __init__(self, name):

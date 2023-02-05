@@ -21,7 +21,19 @@ class Parser:
         self.__curr_token = ""
         self.trees = []
 
-    def tokenise(self):
+    def parse(self):
+        self.__tokenise()
+        self.__negate()
+        self.__break_lines()
+        self.__reformat()
+        self.__create_expression_tree()
+        [i.print_tree() for i in self.trees]
+        self.__equality_to_definition()
+        self.__function_definition_to_lambda()
+        [i.print_tree() for i in self.trees]
+        return self.trees
+
+    def __tokenise(self):
         self.__curr_token = ""
         in_whitespace = True
         in_number = False
@@ -109,9 +121,7 @@ class Parser:
 
     @staticmethod
     def __is_number(string):
-        if re.fullmatch(
-                r"[-+]?([0-9]+|[0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([eE]-?[0-9]+)?",
-                string):
+        if re.fullmatch(builtin_operators.VALID_NUMBER_REGEX, string):
             return True
         else:
             return False
@@ -122,7 +132,8 @@ class Parser:
         else:
             return False
 
-    def __get_operator_queue(self, tokens):
+    @staticmethod
+    def __get_operator_queue(tokens):
         queue = PriorityQueue()
         bracket_level = 0
         for i in range(len(tokens)):
@@ -145,7 +156,7 @@ class Parser:
             queue.insert(tokens[i], score)
         return queue
 
-    def negate(self):
+    def __negate(self):
         for i in range(len(self.tokens)):
             if (i == 0
                     or self.tokens[i - 1].item in builtin_operators.START_BRACKETS
@@ -156,7 +167,7 @@ class Parser:
                 elif self.tokens[i].item == '+':
                     self.tokens[i].item = 'ignore'
 
-    def break_lines(self):
+    def __break_lines(self):
         self.lines = [[]]
         for token in self.tokens:
             if token.item in builtin_operators.LINE_BREAK:
@@ -198,7 +209,7 @@ class Parser:
 
         return post_block_index
 
-    def reformat(self):
+    def __reformat(self):
         for tokens in self.lines:
             queue = self.__get_operator_queue(tokens)
             tokens.insert(0, self.__Token('('))
@@ -227,7 +238,7 @@ class Parser:
                     tokens.insert(post_block_index, self.__Token(')'))  # End of application
                     tokens.insert(index, self.__Token('('))  # Start of application
 
-    def create_expression_tree(self):
+    def __create_expression_tree(self):
         for tokens in self.lines:
             tree = execution_tree.ExecutionTree()
             root = tree.create_function_call()
@@ -278,6 +289,44 @@ class Parser:
         if root.function is None:
             root.set_function(root.parameter.function)
             root.set_parameter(root.parameter.parameter)
+
+    def __equality_to_definition(self):
+        for tree in self.trees:
+            root = tree.get_root()
+            if (root.function.is_function_call()
+                    and root.function.function.is_identifier()
+                    and root.function.function.name.item == '='):
+                if (root.function.parameter.is_function_call()
+                        and root.function.parameter.function.is_identifier()
+                        and root.function.parameter.function.name.item == 'let'):
+                    root.set_function(root.function.parameter)
+
+    def __function_definition_to_lambda(self):
+        for tree in self.trees:
+            root = tree.get_root()
+            if (root.function.is_function_call()
+                    and root.function.function.is_identifier()
+                    and root.function.function.name.item == 'let'):
+                if root.function.parameter.is_function_call():
+                    node = root.function.parameter
+                    while node.is_function_call():
+                        lambda_expr = tree.create_function_call()
+                        lambda_ = tree.create_identifier(self.__Token('lambda'))
+                        value = node.parameter
+
+                        lambda_expr.add_function(lambda_)
+                        lambda_expr.add_parameter(value)
+
+                        parent_call = tree.create_function_call()
+                        parent_call.add_function(lambda_expr)
+                        parent_call.add_parameter(root.parameter)
+
+                        root.set_parameter(parent_call)
+                        node = node.function
+
+                    root.function.set_parameter(node)
+
+
 class PriorityQueue:
     def __init__(self):
         self.__heap = [(-1, None)]  # Heaps are best implemented using 1-indexed arrays
@@ -323,16 +372,8 @@ class PriorityQueue:
 
 
 def test():
-    parser = Parser(r"""\let y = 2x \\ 3y - 2x = y""")
-    parser.tokenise()
-    print(parser.tokens)
-    parser.negate()
-    parser.break_lines()
-    parser.reformat()
-    print(parser.lines)
-    parser.create_expression_tree()
-    [tree.print_tree() for tree in parser.trees]
-
+    parser = Parser(r"""\let f(x)(y) = x^y""")
+    trees = parser.parse()
 
 def swap(arr, i, j):
     arr[i], arr[j] = arr[j], arr[i]
