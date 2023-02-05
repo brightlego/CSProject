@@ -1,3 +1,5 @@
+import local
+
 class ExecutionTree:
     def __init__(self):
         self.__root = None
@@ -9,8 +11,8 @@ class ExecutionTree:
             self.children = set()
             self.locals = None
 
-        def set_locals(self, locals):
-            self.locals = locals
+        def set_locals(self, local_):
+            self.locals = local_
 
         def get_var(self, identifier):
             return self.locals.get_var(identifier)
@@ -101,6 +103,14 @@ class ExecutionTree:
 
     def __set_root(self, root):
         self.__root = root
+
+    def set_locals(self, globals_):
+        for node in self.nodes:
+            if node.is_root():
+                node.set_locals(globals_)
+            else:
+                locals_ = local.Locals()
+                locals_.set_node(node)
 
     def get_root(self):
         return self.__root

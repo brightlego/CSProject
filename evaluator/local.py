@@ -1,7 +1,7 @@
 class Locals:
-    def __init__(self, node):
+    def __init__(self):
         self.vars = {}
-        self.node = node
+        self.node = None
 
     def get_var(self, identifier):
         if identifier in self.vars:
@@ -24,3 +24,6 @@ class Globals(Locals):
             return self.vars[identifier]
         else:
             return None
+
+    def set_node(self, node):
+        return
