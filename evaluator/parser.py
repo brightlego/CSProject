@@ -1,48 +1,220 @@
+"""The parser to parse raw text into execution trees
+
+Classes:
+    Parser(object)
+        -- The parser class that is used to parse text into execution trees
+    PriorityQueue(object)
+        -- A priority queue implemented using a heap
+
+Functions:
+    test() -> None
+        -- Used to test if the parser is working
+    swap(arr: list, i: int, j: int) -> None
+        -- Swaps two items in an array
+
+"""
+
+# For checking if something is a number
 import re
+
+# Importing the internal modules
 import evaluator.operators
 import evaluator.execution_tree
 
 
 class Parser:
+    """The parser class used to parse text into expression trees
+
+    Classes:
+        Parser.__Token(object)
+            -- The class which is used to make tokens unique
+
+    Attributes:
+        __raw_text: str
+            -- The raw text that is yet to be parsed
+        __tokens: list[Parser.__Token] (default [])
+            -- The tokens that have been parsed
+        __lines: list[list[Parser.__Token]] (default [])
+            -- The tokens after they have been split into multiple lines
+        __curr_token: str (default "")
+            -- The current token in the process of being tokenised
+        __trees: list[evaluator.execution_tree.ExecutionTree]
+            -- The parsed trees for each line
+
+    Methods:
+        __init__(raw_text: str)
+            -- The initiliser for the class
+
+        parse() -> list[evaluator.execution_tree.ExecutionTree]
+            -- Parses the statements and returns the parsed trees for each line
+
+        __tokenise() -> None
+            -- Tokenises the raw text and puts the tokens into __tokens
+
+        __add_token() -> None
+            -- Adds the current token into __tokens
+
+        __is_number(string: str) -> bool
+            -- Checks if the string is a valid number
+
+        __maintains_tokens_numericness(char: str) -> bool
+            -- Checks if adding char onto the end of the token keeps it a
+               valid number
+
+        __get_operator_queue(tokens: list[Parser.__Tokens]) -> PriorityQueue
+            -- Returns a queue of all the tokens in order of when to re-arange
+               them
+
+        __negate() -> None
+            -- Converts the subtraction/addition operators into negation/ignore
+               operators in the right conditions resepctively.
+
+        __break_lines() -> None
+            -- Breaks __tokens up into separate lines and puts them in __lines
+
+        __get_preblock(index: int, tokens: list[Parser.__Token]) -> int
+            -- Gets the index of the start of the preceding block
+
+        __get_postblock(index: int, tokens: list[Parser.__Token]) -> int
+            -- Gets the index of the end of the succeeding block
+
+        __reformat() -> None
+            -- Reformats the tokens into prefix notation
+
+        __create_expression_trees() -> None
+            -- Creates the expression trees from the lines of tokens
+
+        __recurse_create_tree(
+                tree: evaluator.expression_tree.ExpressionTree
+                parent: evaluator.expression_tree.ExpressionTree.__Node
+                iterator: Iterator)
+            -- Creates the expression tree using a recursive algorithm
+
+        __compress_tree() -> None
+            -- Makes sure that every node in the tree has either 2 children or
+               is a leaf.
+
+        __equality_to_definition() -> None
+            -- Converts Statements in the form ((= (let ...)) ...) into the
+               form ((let ...) ...)
+
+        __function_definition_to_lambda() -> None
+            -- Converts defining a function into assigning a lambda expression
+
+        __lambda_expr_to_def_node() -> None
+            -- Converts a lambda expression into a node defining an anonymous
+               function
+    """
     class __Token:
+        """The class which is used to make tokens unique
+
+        Attributes:
+            item: str
+                -- The token stored
+
+        Methods:
+            __init__(item: str)
+                -- The initiliser
+            __repr__() -> str
+                -- Used for the debug representation of the class
+            __str__() -> str
+                -- Used for the string representation of the class
+        """
         def __init__(self, item):
+            """The initiliser
+
+            Arguments:
+                item: str
+                    -- The item stored
+            """
             self.item = item
 
         def __repr__(self):
+            """Used for the debug representation of the class
+
+            Arguments:
+                None
+
+            Returns:
+                representation: str
+                    -- The debug representation of the item
+            """
             return repr(self.item)
 
         def __str__(self):
+            """Used for the string representation of the class
+            Arguments:
+                None
+
+            Returns:
+                representation: str
+                    -- The string representation of the item
+            """
             return str(self.item)
 
     def __init__(self, raw_text):
-        self.raw_text = raw_text
-        self.tokens = []
-        self.lines = []
+        """The initiliser for the class
+
+        Arguments:
+            raw_text: str
+                -- The raw text to be parsed
+        """
+        self.__raw_text = raw_text
+        self.__tokens = []
+        self.__lines = []
         self.__curr_token = ""
-        self.trees = []
+        self.__trees = []
 
     def parse(self):
+        """Parses the statements and returns the parsed trees for each line
+
+        Executes the necessary functions to parse the trees in order.
+
+        Arguments:
+            None
+
+        Returns:
+            trees: list[evaluator.execution_tree.ExecutionTree]
+        """
+
+        # The order is self-explanatory
         self.__tokenise()
         self.__negate()
         self.__break_lines()
         self.__reformat()
-        self.__create_expression_tree()
+        self.__create_expression_trees()
         self.__equality_to_definition()
         self.__function_definition_to_lambda()
-        [i.print_tree() for i in self.trees]
         self.__lambda_expr_to_def_node()
-        [i.print_tree() for i in self.trees]
-        return self.trees
+        return self.__trees
 
     def __tokenise(self):
-        self.__curr_token = ""
-        in_whitespace = True
-        in_number = False
-        in_identifier = False
+        """Tokenises the raw text and puts the tokens into __tokens
 
-        for char in self.raw_text:
+        Arguments:
+            None
+
+        Returns:
+            None
+        """
+
+        self.__curr_token = ""  # Resets the current token
+
+        # The pointer is treated as initially in whitespace as that indicates
+        # that the tokeniser should look out for the next item and ignore any
+        # initial whitepace.
+        in_whitespace = True  # Is the pointer currently in whitespace?
+        in_number = False  # Is the pointer currently in a literal number?
+        in_identifier = False  # Is the pointer currently in an identifier?
+
+        # Iterate through __raw_text characterwise
+        for char in self.__raw_text:
+
+            # If the character is a '\', it is either the start of an
+            # identifier, or the end of a line break
             if char == '\\':
-                if in_identifier:
+                # If
+                if in_identifier and self.__curr_token == "\\":
                     self.__curr_token = r"\\"
                     self.__add_token()
                     in_identifier = False
@@ -63,7 +235,8 @@ class Parser:
                 in_number = False
 
             elif in_number:
-                if self.__maintains_tokens_numericness(char) or self.__maintains_tokens_numericness(char + '0'):
+                if (self.__maintains_tokens_numericness(char)
+                        or self.__maintains_tokens_numericness(char + '0')):
                     self.__curr_token += char
                 else:
                     if self.__curr_token[-1] in 'eE':
@@ -104,7 +277,7 @@ class Parser:
 
         # This makes sure that arrows/le/ge/ne are treated as a single string
         new_tokens = []
-        for i in self.tokens:
+        for i in self.__tokens:
             if len(new_tokens) == 0:
                 new_tokens.append(i)
             else:
@@ -113,11 +286,11 @@ class Parser:
                 else:
                     new_tokens.append(i)
 
-        self.tokens = new_tokens
+        self.__tokens = new_tokens
 
     def __add_token(self):
         if self.__curr_token:
-            self.tokens.append(self.__Token(self.__curr_token))
+            self.__tokens.append(self.__Token(self.__curr_token))
             self.__curr_token = ""
 
     @staticmethod
@@ -158,23 +331,23 @@ class Parser:
         return queue
 
     def __negate(self):
-        for i in range(len(self.tokens)):
+        for i in range(len(self.__tokens)):
             if (i == 0
-                    or self.tokens[i - 1].item in evaluator.operators.START_BRACKETS
-                    or self.tokens[i - 1].item in evaluator.operators.OPERATORS
-                    or self.tokens[i - 1].item in evaluator.operators.LINE_BREAK):
-                if self.tokens[i].item == '-':
-                    self.tokens[i].item = 'negate'
-                elif self.tokens[i].item == '+':
-                    self.tokens[i].item = 'ignore'
+                    or self.__tokens[i - 1].item in evaluator.operators.START_BRACKETS
+                    or self.__tokens[i - 1].item in evaluator.operators.OPERATORS
+                    or self.__tokens[i - 1].item in evaluator.operators.LINE_BREAK):
+                if self.__tokens[i].item == '-':
+                    self.__tokens[i].item = 'negate'
+                elif self.__tokens[i].item == '+':
+                    self.__tokens[i].item = 'ignore'
 
     def __break_lines(self):
-        self.lines = [[]]
-        for token in self.tokens:
+        self.__lines = [[]]
+        for token in self.__tokens:
             if token.item in evaluator.operators.LINE_BREAK:
-                self.lines.append([])
+                self.__lines.append([])
             else:
-                self.lines[-1].append(token)
+                self.__lines[-1].append(token)
 
     @staticmethod
     def __get_preblock(index, tokens):
@@ -210,8 +383,9 @@ class Parser:
 
         return post_block_index
 
+    # noinspection PyUnresolvedReferences
     def __reformat(self):
-        for tokens in self.lines:
+        for tokens in self.__lines:
             queue = self.__get_operator_queue(tokens)
             tokens.insert(0, self.__Token('('))
             tokens.append(self.__Token(')'))
@@ -239,14 +413,14 @@ class Parser:
                     tokens.insert(post_block_index, self.__Token(')'))  # End of application
                     tokens.insert(index, self.__Token('('))  # Start of application
 
-    def __create_expression_tree(self):
-        for tokens in self.lines:
+    def __create_expression_trees(self):
+        for tokens in self.__lines:
             tree = evaluator.execution_tree.ExecutionTree()
             root = tree.create_function_call()
             assert root is tree.get_root()
             self.__recurse_create_tree(tree, root, iter(tokens))
             self.__compress_tree(tree)
-            self.trees.append(tree)
+            self.__trees.append(tree)
 
     def __recurse_create_tree(self, tree, parent, iterator):
         children = []
@@ -294,7 +468,7 @@ class Parser:
             root.set_parameter(root.parameter.parameter)
 
     def __equality_to_definition(self):
-        for tree in self.trees:
+        for tree in self.__trees:
             root = tree.get_root()
             if (root.function.is_function_call()
                     and root.function.function.is_identifier()
@@ -305,7 +479,7 @@ class Parser:
                     root.set_function(root.function.parameter)
 
     def __function_definition_to_lambda(self):
-        for tree in self.trees:
+        for tree in self.__trees:
             root = tree.get_root()
             if (root.function.is_function_call()
                     and root.function.function.is_identifier()
@@ -330,13 +504,14 @@ class Parser:
                     root.function.set_parameter(node)
 
     def __lambda_expr_to_def_node(self):
-        for tree in self.trees:
+        for tree in self.__trees:
             for node in tree:
                 if node.is_function_call():
                     if node.function.is_function_call():
                         if node.function.function.is_identifier():
                             if node.function.function.name.item == 'lambda':
-                                function_def = tree.create_function_def(node.function.parameter)
+                                function_def = tree.create_function_def(
+                                    node.function.parameter)
                                 function_def.set_expr(node.parameter)
                                 if node.parent.is_function_call():
                                     if node.parent.function is node:
@@ -348,9 +523,11 @@ class Parser:
                                 else:
                                     node.parent.set_expr(function_def)
 
+
 class PriorityQueue:
     def __init__(self):
-        self.__heap = [(-1, None)]  # Heaps are best implemented using 1-indexed arrays
+        # Heaps are best implemented using 1-indexed arrays
+        self.__heap = [(-1, None)]
         self.n = 0
 
     def insert(self, item, priority):
