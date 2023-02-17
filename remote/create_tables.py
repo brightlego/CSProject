@@ -10,8 +10,8 @@ PRAGMA = "PRAGMA foreign_keys = ON;"
 
 # The query to create the tables.
 CREATE_TABLES_QUERY = """
-DROP TABLE IF EXISTS Users;
 DROP TABLE IF EXISTS Files;
+DROP TABLE IF EXISTS Users;
 DROP TABLE IF EXISTS UserSessions;
 
 CREATE TABLE Users (
