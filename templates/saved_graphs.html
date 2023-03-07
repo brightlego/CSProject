@@ -1,10 +1,29 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block title %} Graphite - Saved Graphs {% endblock %}
+
+{% block nav %}
+    <a href="/calculator{{ calculator_path }}"> Calculator </a>
+    <a href="/saved-graphs" class="active"> Saved Graphs </a>
+    <a href="/login">Log out</a>
+{% endblock %}
+
+{% block body %}
+    <table>
+        {% for graph in graphs %}
+            <tr>
+                <th>
+                    <a href="/calculator/{{ graph['Filepath'] }}">
+                    {{ graph['Filename'] }}
+                    </a>
+                </th>
+
+                <td>
+                    <a href="/calculator/{{ graph['Filepath'] }}">
+                        {{ graph['Description'] }}
+                    </a>
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endblock %}

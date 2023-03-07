@@ -24,7 +24,7 @@ CREATE TABLE Users (
 CREATE TABLE UserSessions(
    SessionID CHAR(16) PRIMARY KEY CHECK (SessionID NOT GLOB '*[^0-9a-f]*'),
    UserID CHAR(16) NOT NULL CHECK (UserID NOT GLOB '*[^0-9a-f]*'),
-   Expires CHAR(19) NOT NULL CHECK (Expires GLOB '20[2-9][0-9]-[01][0-9]-[0-3][0-9] [01][0-9]:[0-5][0-9]:[0-5][0-9]' AND Expires > DATETIME()),
+   Expires CHAR(19) NOT NULL CHECK (Expires GLOB '20[2-9][0-9]-[01][0-9]-[0-3][0-9] [012][0-9]:[0-5][0-9]:[0-5][0-9]' AND Expires > DATETIME()),
    FOREIGN KEY (UserID) REFERENCES Users (UserID) ON DELETE CASCADE
 );
 

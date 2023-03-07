@@ -27,6 +27,7 @@ import json
 import authenticate
 import sqlite3
 import files
+import os
 
 # Create the app
 app = flask.Flask(__name__)
@@ -34,6 +35,8 @@ app = flask.Flask(__name__)
 PORT = 5005
 
 DATABASE = 'database/storage.db'
+ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'keys')
+SSL_CONTEXT = (os.path.join(ASSETS_DIR,'server.crt'), os.path.join(ASSETS_DIR,'server.key'))
 
 app.register_error_handler(authenticate.AuthenticationError,
                            lambda e : ("{}", 403))
@@ -219,5 +222,10 @@ def get_one_file(filepath):
     return json.dumps({"Filepath": filepath, "Filename": filename, "Description": description, "Content": content})
 
 
+@app.route('/')
+def root():
+    return "Test successful"
+
+
 if __name__ == '__main__':
-    app.run(host="localhost", port=PORT)
+    app.run(host="localhost", port=PORT, ssl_context=SSL_CONTEXT)

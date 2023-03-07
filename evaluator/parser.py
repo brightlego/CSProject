@@ -214,8 +214,8 @@ class Parser:
             # identifier, or the end of a line break
             if char == '\\':
                 # If
-                if in_identifier and self.__curr_token == "\\":
-                    self.__curr_token = r"\\"
+                if in_identifier and self.__curr_token == "":
+                    self.__curr_token = "\\\\"
                     self.__add_token()
                     in_identifier = False
                     in_whitespace = True

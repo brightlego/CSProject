@@ -7,3 +7,15 @@ function set_height_width_cookies() {
 }
 set_height_width_cookies()
 addEventListener("resize", (event) => set_height_width_cookies())
+
+function save_graph() {
+    let text = document.getElementsByName("raw_text")[0].value
+    document.getElementsByName("content")[0].value = text
+}
+
+function graph() {
+    let filename = document.getElementsByName("filename")[0].value
+    let description = document.getElementsByName("description")[0].value
+    document.getElementsByName("filename2")[0].value = filename
+    document.getElementsByName("description2")[0].value = description
+}

@@ -1,10 +1,23 @@
+import os
 import urllib.request
 import urllib.parse
 import urllib.error
 import http.cookiejar
 import json
+import ssl
 
-CLOUD_URL = 'http://127.0.0.1:5005'
+CLOUD_IP = '127.0.0.1'
+CLOUD_PORT = 5005
+CLOUD_URL = f'https://{CLOUD_IP}:{CLOUD_PORT}'
+
+cert = ssl.get_server_certificate((CLOUD_IP, CLOUD_PORT))
+with open('tmp/server.crt', 'w') as f:
+    f.write(cert)
+
+context = ssl.create_default_context()
+context.load_verify_locations(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tmp', 'server.crt'))
+context.check_hostname = False
+
 USER_AUTH_URL = urllib.parse.urljoin(CLOUD_URL, 'user/auth')
 USER_CREATE_URL = urllib.parse.urljoin(CLOUD_URL, 'user/create')
 FILE_CREATE_URL = urllib.parse.urljoin(CLOUD_URL, 'file/add')
@@ -14,7 +27,7 @@ FILE_GET_ALL_URL = urllib.parse.urljoin(CLOUD_URL, 'file/get-all')
 
 
 class AuthorisationError(Exception): pass
-class Conflict(Exception): pass
+class ConflictError(Exception): pass
 
 
 def handle_http_error(err):
@@ -24,7 +37,7 @@ def handle_http_error(err):
         case 404:
             raise FileNotFoundError
         case 409:
-            raise Conflict
+            raise ConflictError
         case _:
             print(f'Received {err.code} {err.reason}')
 
@@ -32,8 +45,9 @@ def handle_http_error(err):
 class CloudStorage:
     def __init__(self):
         self.cj = http.cookiejar.CookieJar()
-        self.handler = urllib.request.HTTPCookieProcessor(self.cj)
-        self.opener = urllib.request.build_opener(self.handler)
+        self.handlers = (urllib.request.HTTPCookieProcessor(self.cj),
+                         urllib.request.HTTPSHandler(context=context))
+        self.opener = urllib.request.build_opener(*self.handlers)
 
     def authorise_user(self, username, password):
         data = urllib.parse.urlencode({'Username': username, 'Password': password})
@@ -68,7 +82,7 @@ class CloudStorage:
         data = json.dumps({'Filepath': filepath, 'Filename': filename, 'Description': description, 'Content': content})
         data = data.encode('UTF-8')
         try:
-            response = self.opener.open(FILE_UPDATE_URL, data)
+            response = self.opener.open(FILE_UPDATE_URL, data=data)
         except urllib.error.HTTPError as err:
             handle_http_error(err)
         return
@@ -89,7 +103,7 @@ class CloudStorage:
         description = ""
         content = ""
         try:
-            path = urllib.parse.urljoin(FILE_GET_ONE_URL,filepath)
+            path = urllib.parse.urljoin(FILE_GET_ONE_URL, filepath)
             response = self.opener.open(path)
             response_data = response.read()
             response_data = json.loads(response_data)

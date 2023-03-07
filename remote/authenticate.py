@@ -148,7 +148,7 @@ def create_session(user_ID, connection):
     """
     try:
         connection.execute(query, (user_ID, session_ID, expires))
-    except sqlite3.IntegrityError:
+    except sqlite3.IntegrityError as err:
         # This should only be reached if there is an integrity error due to the
         # user ID being invalid
 

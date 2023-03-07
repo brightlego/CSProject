@@ -5,7 +5,6 @@ import evaluator.local
 import evaluator.graphical_processor
 import re
 
-
 class Executor:
     def __init__(self, trees):
         self.trees = trees
@@ -51,6 +50,17 @@ class Executor:
                     node.del_var(identifier)
                     return out.value
             return node.apply(parameter).value
+        if isinstance(value, tuple):
+            if len(value) != len(identifier):
+                raise ValueError
+            for v, i in zip(value, identifier):
+                if not (isinstance(v, float) or isinstance(v, int)):
+                    raise ValueError
+                node.set_var(i, evaluator.builtins.types.Number(v))
+            out = self.__evaluate_node(node)
+            for i in identifier:
+                node.del_var(i)
+            return out.value
         else:
             raise ValueError
 

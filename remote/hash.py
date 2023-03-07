@@ -11,6 +11,8 @@ def get_random_hex(seed, length, word_size=8):
     out = ""
     for i, _ in zip(lcprng(seed), range(length)):
         out += f"{i%2**(word_size):x}"
+
+    out = out.ljust(length * word_size // 4, '0')
     return out
 
 

@@ -1,0 +1,3 @@
+\let f(x) = \cos x \\
+\let g(x) = \sin x \\
+(f(t), g(t))
