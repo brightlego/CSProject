@@ -12,23 +12,47 @@
 {% block body %}
     <div style="height: 85vh; width: 100vw">
         <div class="left form-box">
+            {% if error_message %}
+                <p class="error">
+                    {{ error_message }}
+                </p>
+            {% endif %}
             <form method="post" onsubmit="save_graph()">
-                <input type="text" name="filename" value="{{ filename }}" />
-                <input type="text" name="description" value="{{ description }}" />
+                <input type="text" name="filename" value="{{ filename }}" placeholder="Filename" />
+                <input type="text" name="description" value="{{ description }}" placeholder="Description"/>
                 <div style="display: none">
                     <textarea name="content"></textarea>
                 </div>
                 <input type="text" value="save" name="for" style="display: none">
                 <input type="submit" value="save"/>
             </form>
-            {% if error_message %}
-                <p class="error">
-                    {{ error_message }}
-                </p>
-            {% endif %}
             <form method="post" onsubmit="graph()">
                 <input type="submit"/>
-                <textarea name="raw_text">{{ raw_text }}</textarea>
+                <div style="display: inline-block">
+                    X range:
+                    <label style="width: 5%">
+                        <input type="number" name="min-x" style="width: 20%" value="{{ minx }}">
+                    </label>
+                    -
+                    <label style="width: 5%">
+                        <input type="number" name="max-x" style="width: 20%" value="{{ maxx }}">
+                    </label>
+                    <br>
+                    Y range:
+                    <label style="width: 5%">
+                        <input type="number" name="min-y" style="width: 20%" value="{{ miny }}">
+                    </label>
+                    -
+                    <label style="width: 5%">
+                        <input type="number" name="max-y" style="width: 20%" value="{{ maxy }}">
+                    </label>
+
+                </div>
+                {% if error_message %}
+                    <textarea name="raw_text" class="with-error">{{ raw_text }}</textarea>
+                {% else %}
+                    <textarea name="raw_text">{{ raw_text }}</textarea>
+                {% endif %}
                 <input type="text" value="graph" name="for" style="display: none">
                 <div style="display: none">
                     <input type="text" name="filename2" value="" />

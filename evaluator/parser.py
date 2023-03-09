@@ -371,9 +371,9 @@ class Parser:
     def __get_postblock(index, tokens):
         bracket_level = 0
         post_block_index = index + 1
-        while (bracket_level > 0 or (
+        while post_block_index < len(tokens) and (bracket_level > 0 or (
                 tokens[post_block_index].item not in evaluator.operators.INFIX_BINARY_SCORE
-                and tokens[post_block_index].item not in evaluator.operators.END_BRACKETS)
+                and (tokens[post_block_index].item not in evaluator.operators.END_BRACKETS or tokens[index].item in evaluator.operators.INFIX_BINARY_SCORE) )
         ):
             if tokens[post_block_index].item in evaluator.operators.END_BRACKETS:
                 bracket_level -= 1
@@ -570,8 +570,9 @@ class PriorityQueue:
 
 
 def test():
-    parser = Parser(r"""\let f(x) = 2 + ((\lambda x) (x^2))(5)""")
+    parser = Parser(r"""\let k = (1/2) (0^2)""")
     trees = parser.parse()
+    print(trees[0].get_root())
 
 
 def swap(arr, i, j):

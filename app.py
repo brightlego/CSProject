@@ -55,7 +55,8 @@ app = flask.Flask(__name__)
 
 cloud_storage = client_cloud_storage.CloudStorage()
 calculator_path = ""
-path = "static/test.png"
+path = "static/default.png"
+prev_raw_text = ""
 # The port the flask app is hosted on
 PORT = 5000
 
@@ -160,14 +161,19 @@ def calculator(filepath=""):
 
     global calculator_path
     global path
+    global prev_raw_text
 
     # Initilise the raw text and the path.
     # Raw text has to be initilised because it is then fed back into the
     # template so the user can easily modify the graph
-    raw_text = ""
+    raw_text = prev_raw_text
     filename = ""
     description = ""
     error_message = ""
+    minx = X_RANGE[0]
+    maxx = X_RANGE[1]
+    miny = Y_RANGE[0]
+    maxy = Y_RANGE[1]
 
     calculator_path = filepath
     if filepath:
@@ -200,6 +206,12 @@ def calculator(filepath=""):
         raw_text = flask.request.form['raw_text']
         filename = flask.request.form['filename2']
         description = flask.request.form['description2']
+        prev_raw_text = raw_text
+
+        minx = flask.request.form['min-x']
+        maxx = flask.request.form['max-x']
+        miny = flask.request.form['min-y']
+        maxy = flask.request.form['max-y']
 
         # Get the height and width of the graph in pixels.
         # If they are not valid integers Default to a height of 0 and a width
@@ -211,6 +223,17 @@ def calculator(filepath=""):
             height = 0
             width = 0
 
+        try:
+            minx = float(minx)
+            maxx = float(maxx)
+            miny = float(miny)
+            maxy = float(maxy)
+        except ValueError:
+            minx = -5
+            maxx = 5
+            miny = -5
+            maxy = 5
+
         # If, somehow, the height and width are negative, make them positive
         if height < 0:
             height = 0
@@ -218,7 +241,7 @@ def calculator(filepath=""):
             width = 0
 
         # Evaluate these and get the path of the file where they are stored
-        path = evaluator.evaluate(raw_text, width, height, X_RANGE, Y_RANGE)
+        path, error_message = evaluator.evaluate(raw_text, width, height, (minx, maxx), (miny, maxy))
 
     # Finally render the 'calculator.html' template substituting in raw_text
     # for the raw text on the form and path for the imate location
@@ -229,7 +252,11 @@ def calculator(filepath=""):
         description=description,
         error_message=error_message,
         calculator_path=calculator_path,
-        image_location=path)
+        image_location=path,
+        minx=minx,
+        maxx=maxx,
+        miny=miny,
+        maxy=maxy)
 
 
 # Not implemented
@@ -247,4 +274,4 @@ def saved_graphs():
 # If running the file directly, host the flask server locally on the default
 # port. It is currently in debug mode as that allows for easy debugging.
 if __name__ == '__main__':
-    app.run(host='localhost', port=PORT, debug=True)
+    app.run(host='localhost', port=PORT, debug=False)

@@ -6,6 +6,9 @@ class ExecutionTree:
         self.__root = None
         self.nodes = set()
 
+    def __repr__(self):
+        return f"<Tree {self.__root}>"
+
     class __Node:
         def __init__(self):
             self.parent = None

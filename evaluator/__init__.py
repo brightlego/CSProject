@@ -37,9 +37,11 @@ def evaluate(raw_text, width, height, x_range, y_range):
             -- The location of the graph produced
     """
     # Create a parser for the raw text and parse it
-    parser = evaluator.parser.Parser(raw_text)
-    execution_trees = parser.parse()
-
+    try:
+        parser = evaluator.parser.Parser(raw_text)
+        execution_trees = parser.parse()
+    except Exception:
+        return "static/default.png", "Something went wrong in parsing"
     # Creates an executor from the parsed statements
     executor = evaluator.executor.Executor(execution_trees)
 

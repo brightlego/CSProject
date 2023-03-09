@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import matplotlib.patches as patches
 import numpy as np
+import evaluator.builtins.functions
+import evaluator.builtins.types
 
 DPI = 96
 
@@ -15,28 +17,42 @@ class Grapher:
         self.yrange = (-5, 5)
 
     def graph(self, xrange, yrange):
+        evaluator.builtins.functions.executor = self.executor
         plt.figure(figsize=(self.width/DPI, self.height/DPI), dpi=DPI)
+
+        error_message = ""
+
         self.xrange = xrange
         self.yrange = yrange
         for tree in self.executor.trees:
-            if self.is_y_fx(tree):
-                function = self.get_function(tree)
-                self.y_fx(function)
-            elif self.is_parametric(tree):
-                root = tree.get_root()
-                x_function = root.function.parameter
-                y_function = root.parameter
-                self.parametric(x_function, y_function, np.arange(-100, 100, 0.01))
-            elif self.is_implicit(tree):
-                root = tree.get_root()
-                left_func = root.function.parameter
-                right_func = root.parameter
-                self.implicit(right_func, left_func)
-        return self.plot()
+            try:
+                if self.is_y_fx(tree):
+                    function = self.get_function(tree)
+                    self.y_fx(function)
+                elif self.is_parametric(tree):
+                    root = tree.get_root()
+                    x_function = root.function.parameter
+                    y_function = root.parameter
+                    self.parametric(x_function, y_function, np.arange(-10, 10, 0.01))
+                elif self.is_intersect(tree):
+                    root = tree.get_root()
+                    function1 = root.parameter.function.parameter
+                    function2 = root.parameter.parameter
+                    self.intersect(function1, function2)
+                elif self.is_implicit(tree):
+                    root = tree.get_root()
+                    left_func = root.function.parameter
+                    right_func = root.parameter
+                    self.implicit(right_func, left_func)
+            except Exception as err:
+                error_message += f"Something went wrong when plotting statement {self.executor.trees.index(tree)+1}. "
+        return self.plot(), error_message
 
     def plot(self):
         plt.xlim(self.xrange[0], self.xrange[1])
         plt.ylim(self.yrange[0], self.yrange[1])
+        plt.grid(visible=True, which="both")
+        plt.tight_layout()
         name = ''.join([hex(i)[2:] for i in np.random.bytes(4)])
         name += '.png'
         name = 'static/images/' + name
@@ -149,7 +165,6 @@ class Grapher:
 
     def is_parametric(self, tree):
         root = tree.get_root()
-        print(tree)
         if root.function.is_function_call():
             if root.function.function.is_identifier():
                 if root.function.function.name.item == ',':
@@ -163,6 +178,31 @@ class Grapher:
             x_values.append(self.executor.evaluate_function(x_function, t, identifier='t'))
             y_values.append(self.executor.evaluate_function(y_function, t, identifier='t'))
         plt.plot(x_values, y_values)
+
+    def is_intersect(self, tree):
+        root = tree.get_root()
+        if root.function.is_identifier():
+            if root.function.name.item == 'intersect':
+                if (root.parameter.is_function_call()
+                    and root.parameter.function.is_function_call()
+                    and root.parameter.function.function.is_identifier()
+                    and root.parameter.function.function.name.item == ','):
+                    return True
+        return False
+
+    def intersect(self, function1, function2):
+        x = 0
+        dx = 0.0001
+        height = 1
+
+        for _ in range(100):
+            height = self.executor.evaluate_function(function1, x) - self.executor.evaluate_function(function2, x)
+            slope = (height - self.executor.evaluate_function(function1, x - dx) + self.executor.evaluate_function(function2, x - dx)) / dx
+            x -= height/slope
+        if height**2 < 0.001:
+            y = self.executor.evaluate_function(function1, x)
+            plt.scatter([x], [y])
+            plt.gca().annotate(f"({x:f}, {y:f})", (x, y))
 
     def get_function(self, tree):
         root = tree.get_root()

@@ -76,11 +76,21 @@ input {
 }
 
 .left textarea {
-    height: 70vh;
+    height: 60vh;
+    width: 30vw;
+}
+.left textarea.with-error {
+    height: 50vh;
     width: 30vw;
 }
 
 a {
     text-decoration: none;
     color: black;
+}
+
+.error {
+    font-family: monospace;
+    color: darkred;
+    font-size: small;
 }

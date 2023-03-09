@@ -35,6 +35,15 @@ class Builtin(Function):
             return f"<Builtin {self.name}>"
 
 
+class IdentifierName(Function):
+    def __init__(self, name):
+        self.name = name
+        super().__init__()
+
+    def __repr__(self):
+        return f"<id {self.name}>"
+
+
 class Tuple(Function):
     def __init__(self, item1=None, item2=None):
         self.item1 = item1
@@ -71,22 +80,25 @@ class Tuple(Function):
             self.item2 = Tuple(self.item2, item)
 
     def get_item(self, index):
-        if index == 0:
+        length = self.get_length()
+        if index >= length or index <= -1:
+            return None
+        elif length <= 2 and index == 1:
+            return self.item2
+        elif length <= 2 and index == 0:
             return self.item1
-        elif index >= 1 and isinstance(self.item2, Tuple):
-            return self.item2.get_item(index - 1)
-        elif index == 1:
+        elif index == length - 1:
             return self.item2
         else:
-            return None
+            return self.item1.get_item(index)
 
     def get_length(self):
-        if self.item2 is None:
-            if self.item1 is None:
+        if self.item1 is None:
+            if self.item2 is None:
                 return 0
             else:
                 return 1
-        elif isinstance(self.item2, Tuple):
-            return 1 + self.item2.get_length()
+        elif isinstance(self.item1, Tuple):
+            return 1 + self.item1.get_length()
         else:
             return 2
