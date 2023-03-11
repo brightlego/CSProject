@@ -36,7 +36,8 @@ PORT = 5005
 
 DATABASE = 'database/storage.db'
 ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'keys')
-SSL_CONTEXT = (os.path.join(ASSETS_DIR,'server.crt'), os.path.join(ASSETS_DIR,'server.key'))
+SSL_CONTEXT = (os.path.join(ASSETS_DIR,'server.crt'), os.path.join(ASSETS_DIR,
+                                                                   'server.key'))
 
 app.register_error_handler(authenticate.AuthenticationError,
                            lambda e : ("{}", 403))
@@ -79,7 +80,8 @@ def auth_user():
             flask.abort(400)
 
         user_ID = ""
-        user_ID = authenticate.auth_username_password(username, password, connection)
+        user_ID = authenticate.auth_username_password(username, password,
+                                                      connection)
 
         session_ID, expires = authenticate.create_session(user_ID, connection)
 
@@ -149,7 +151,8 @@ def update_file():
         filename = data["Filename"]
         description = data["Description"]
         content = data["Content"]
-        files.update_file(filepath, user_ID, filename, description, content, connection)
+        files.update_file(filepath, user_ID, filename, description, content,
+                          connection)
     return ""
 
 
@@ -217,9 +220,11 @@ def get_one_file(filepath):
         content = files.read_file(filepath, user_ID, connection)
         if content is None:
             raise authenticate.AuthenticationError
-        filename, description = files.get_particular_file(filepath, user_ID, connection)
+        filename, description = files.get_particular_file(filepath, user_ID,
+                                                          connection)
 
-    return json.dumps({"Filepath": filepath, "Filename": filename, "Description": description, "Content": content})
+    return json.dumps({"Filepath": filepath, "Filename": filename,
+                       "Description": description, "Content": content})
 
 
 @app.route('/')

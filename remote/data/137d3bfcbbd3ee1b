@@ -1,0 +1,12 @@
+\let \height(x) = ((\pi)/2)^2 - ( (\asin(\sin(x)))^2 ) \\
+
+\let \horizontal(x)(a) = \asin(\sin( 0.1*(e) * x - 1)) \\
+
+
+\y = 0 \\
+
+((\pi)/2, t)\\
+
+((\pi)/-2, t)\\
+
+( \horizontal(t)(0) , \height(t) )

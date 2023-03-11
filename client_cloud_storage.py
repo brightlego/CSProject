@@ -50,7 +50,8 @@ class CloudStorage:
         self.opener = urllib.request.build_opener(*self.handlers)
 
     def authorise_user(self, username, password):
-        data = urllib.parse.urlencode({'Username': username, 'Password': password})
+        data = urllib.parse.urlencode({'Username': username,
+                                       'Password': password})
         data = data.encode('UTF-8')
         try:
             resp = self.opener.open(USER_AUTH_URL, data=data)
@@ -58,7 +59,8 @@ class CloudStorage:
             handle_http_error(err)
 
     def create_user(self, username, password):
-        data = urllib.parse.urlencode({'Username': username, 'Password': password})
+        data = urllib.parse.urlencode({'Username': username,
+                                       'Password': password})
         data = data.encode('UTF-8')
         try:
             resp = self.opener.open(USER_CREATE_URL, data=data)
@@ -66,7 +68,8 @@ class CloudStorage:
             handle_http_error(err)
 
     def create_file(self, filename, description):
-        data = urllib.parse.urlencode({'Filename': filename, 'Description': description})
+        data = urllib.parse.urlencode({'Filename': filename,
+                                       'Description': description})
         data = data.encode('UTF-8')
         filepath = ""
         try:
@@ -79,7 +82,8 @@ class CloudStorage:
         return filepath
 
     def update_file(self, filepath, filename, description, content):
-        data = json.dumps({'Filepath': filepath, 'Filename': filename, 'Description': description, 'Content': content})
+        data = json.dumps({'Filepath': filepath, 'Filename': filename,
+                           'Description': description, 'Content': content})
         data = data.encode('UTF-8')
         try:
             response = self.opener.open(FILE_UPDATE_URL, data=data)

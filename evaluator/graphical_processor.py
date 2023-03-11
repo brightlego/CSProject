@@ -196,8 +196,10 @@ class Grapher:
         height = 1
 
         for _ in range(100):
-            height = self.executor.evaluate_function(function1, x) - self.executor.evaluate_function(function2, x)
-            slope = (height - self.executor.evaluate_function(function1, x - dx) + self.executor.evaluate_function(function2, x - dx)) / dx
+            height = self.executor.evaluate_function(function1, x) - \
+                     self.executor.evaluate_function(function2, x)
+            slope = (height - self.executor.evaluate_function(function1, x - dx)
+                     + self.executor.evaluate_function(function2, x - dx)) / dx
             x -= height/slope
         if height**2 < 0.001:
             y = self.executor.evaluate_function(function1, x)

@@ -5,7 +5,12 @@ class Locals:
 
     def get_var(self, identifier):
         if identifier in self.vars:
-            return self.vars[identifier]
+            out = self.vars[identifier]
+            past = {identifier, out}
+            while self.get_var(out) is not None and self.get_var(out) not in past:
+                out = self.get_var(out)
+                past.add(out)
+            return out
         else:
             if not self.node.is_root():
                 return self.node.get_parent().get_var(identifier)

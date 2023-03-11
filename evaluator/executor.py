@@ -71,7 +71,7 @@ class Executor:
             out = self.__evaluate_node(node)
             for i in identifier:
                 node.del_var(i)
-            if isinstance(out.value, evaluator.builtins.types.Number):
+            if isinstance(out, evaluator.builtins.types.Number):
                 return out.value
             else:
                 return out
@@ -82,17 +82,19 @@ class Executor:
         if node.is_function_call():
             function = self.__evaluate_node(node.function)
 
-            if not isinstance(function, evaluator.builtins.types.Function) and function.is_identifier():
+            if not isinstance(function, evaluator.builtins.types.Function) \
+                    and function.is_identifier():
                 if function.name.item == '"':
                     if node.parameter.is_identifier():
-                        return evaluator.builtins.types.IdentifierName(node.parameter.name)
+                        return evaluator.builtins.types.IdentifierName(
+                            node.parameter.name)
                     else:
                         raise ValueError
 
             parameter = self.__evaluate_node(node.parameter)
 
-
-            if not isinstance(function, evaluator.builtins.types.Function) and function.is_funcdef():
+            if not isinstance(function, evaluator.builtins.types.Function) \
+                    and function.is_funcdef():
                 return self.__evaluate_node(function.apply(parameter))
             try:
                 return function.apply(parameter)
@@ -100,7 +102,8 @@ class Executor:
                 return node
 
         elif node.is_identifier():
-            if re.fullmatch(evaluator.operators.VALID_NUMBER_REGEX, node.name.item):
+            if re.fullmatch(evaluator.operators.VALID_NUMBER_REGEX,
+                            node.name.item):
                 return evaluator.builtins.types.Number(float(node.name.item))
             else:
                 value = node.get_var(node.name.item)

@@ -213,19 +213,21 @@ class Parser:
             # If the character is a '\', it is either the start of an
             # identifier, or the end of a line break
             if char == '\\':
-                # If
+                # If it is a line break
                 if in_identifier and self.__curr_token == "":
                     self.__curr_token = "\\\\"
                     self.__add_token()
                     in_identifier = False
                     in_whitespace = True
                     in_number = False
+                # Otherwise, it is the start of a token
                 else:
                     self.__add_token()
                     in_identifier = True
                     in_whitespace = False
                     in_number = False
-
+            # If the character is whitespace, it must be the end of a token or
+            # already in whitespace
             elif char.isspace():
                 if in_whitespace:
                     continue
@@ -234,33 +236,44 @@ class Parser:
                 in_whitespace = True
                 in_number = False
 
+            # If the token is a number so far
             elif in_number:
+                # Check if it still is a number after adding the current char
                 if (self.__maintains_tokens_numericness(char)
                         or self.__maintains_tokens_numericness(char + '0')):
                     self.__curr_token += char
                 else:
+                    # Make sure to remove any dangling 'e's which are valid in
+                    # the middle of a number but not at the start or end of one
                     if self.__curr_token[-1] in 'eE':
                         suffix = self.__curr_token[-1]
                         self.__curr_token = self.__curr_token[:-1]
                         self.__add_token()
                         self.__curr_token = suffix
                     self.__add_token()
-                    self.__curr_token += char  # As this is not whitespace, the char should be acknowledged
+                    self.__curr_token += char  # As this is not whitespace,
+                    # the char should be acknowledged
                     in_number = False
 
+            # If the token is currently an identifier
             elif in_identifier:
+                # Add the character to the identifier if it can
                 if char.isalnum() or char in evaluator.operators.NON_ALPHA_IDENTIFIERS:
                     self.__curr_token += char
+                # Otherwise, end the identifier
                 else:
                     self.__add_token()
-                    self.__curr_token += char  # As this is not whitespace, the char should be acknowledged
+                    self.__curr_token += char  # As this is not whitespace, the
+                    # char should be acknowledged
                     in_identifier = False
 
-            elif char.isalpha():  # Single letter identifier
+            # If it is a single letter identifier
+            elif char.isalpha():
                 self.__add_token()
                 self.__curr_token += char
                 in_whitespace = False
 
+            # If the token can start a number, make it start one
             elif char.isnumeric() or char in '.':
                 self.__add_token()
                 self.__curr_token += char
@@ -273,6 +286,7 @@ class Parser:
                 self.__add_token()
                 in_whitespace = False
 
+        # Add the remaining token to the list
         self.__add_token()
 
         # This makes sure that arrows/le/ge/ne are treated as a single string
@@ -281,26 +295,56 @@ class Parser:
             if len(new_tokens) == 0:
                 new_tokens.append(i)
             else:
-                if (new_tokens[-1], i.item) in [('=', '>'), ('<', '='), ('>', '='), ('-', '>'), ('!', '=')]:
+                if (new_tokens[-1], i.item) in [('=', '>'), ('<', '='),
+                                                ('>', '='), ('-', '>'),
+                                                ('!', '=')]:
                     new_tokens[-1].item += i.item
                 else:
                     new_tokens.append(i)
 
+        # set __tokens to the new tokens created
         self.__tokens = new_tokens
 
     def __add_token(self):
+        """Adds the current token to __tokens
+
+        Arguments:
+            None
+
+        Returns:
+            None
+        """
+        # If the current token is not an empty string
         if self.__curr_token:
+            # Add it to tokens
             self.__tokens.append(self.__Token(self.__curr_token))
+            # And reset it
             self.__curr_token = ""
 
     @staticmethod
     def __is_number(string):
+        """Checks if a string is a valid number
+
+        Arguments:
+            string: str -- The string to check
+
+        Returns:
+            is_number: bool -- Whether that string is a number
+        """
         if re.fullmatch(evaluator.operators.VALID_NUMBER_REGEX, string):
             return True
         else:
             return False
 
     def __maintains_tokens_numericness(self, char):
+        """Checks if the token will remain a valid number after adding char
+
+        Arguments:
+            char: str -- The character
+
+        Returns:
+            is_still_number: bool -- Whether the token would remain a number
+        """
         if self.__is_number(self.__curr_token + char):
             return True
         else:
@@ -308,40 +352,81 @@ class Parser:
 
     @staticmethod
     def __get_operator_queue(tokens):
+        """Creates a queue of operators from a list of tokens
+
+        The scoring is in the order:
+        (bracket_level, operator_precedence, right-to-left)
+
+        Arguments:
+            tokens: list[Parser.__Token] -- The tokens
+
+        Returns:
+            queue: PriorityQueue -- The queue of tokens
+        """
+
+        # Create an empty queue
         queue = PriorityQueue()
+
+        # How many brackets deep is the current token?
         bracket_level = 0
         for i in range(len(tokens)):
-            token = tokens[i].item
-            score = (bracket_level, -1, -i)
+            token = tokens[i].item  # Get the value of the token
+            score = (bracket_level, -1, -i)  # The default score
 
+            # Deal with entering or leaving brackets
             if token in evaluator.operators.START_BRACKETS:
                 bracket_level += 1
             elif token in evaluator.operators.END_BRACKETS:
                 bracket_level -= 1
+
+            # Deal with the scoring of the token
             elif token in evaluator.operators.INFIX_BINARY_SCORE:
-                score = (bracket_level, evaluator.operators.INFIX_BINARY_SCORE[token], -i)
+                score = (bracket_level,
+                         evaluator.operators.INFIX_BINARY_SCORE[token], -i)
             elif token in evaluator.operators.POSTFIX_UNARY_SCORE:
-                score = (bracket_level, evaluator.operators.POSTFIX_UNARY_SCORE[token], -i)
+                score = (bracket_level,
+                         evaluator.operators.POSTFIX_UNARY_SCORE[token], -i)
             elif token in evaluator.operators.PREFIX_UNARY_SCORE:
-                score = (bracket_level, evaluator.operators.PREFIX_UNARY_SCORE[token], -i)
+                score = (bracket_level,
+                         evaluator.operators.PREFIX_UNARY_SCORE[token], -i)
             else:
+                # A standard identifier
                 score = (bracket_level, 0, -i)
 
             queue.insert(tokens[i], score)
         return queue
 
     def __negate(self):
+        """Turns binary addition/subtraction operators into unary ignore/negate
+        operators respectively.
+
+        Arguments:
+            None
+
+        Returns:
+            None
+        """
         for i in range(len(self.__tokens)):
+            # If it cannot possibly be a subtraction/addition
             if (i == 0
-                    or self.__tokens[i - 1].item in evaluator.operators.START_BRACKETS
-                    or self.__tokens[i - 1].item in evaluator.operators.OPERATORS
-                    or self.__tokens[i - 1].item in evaluator.operators.LINE_BREAK):
+                    or self.__tokens[i-1].item in evaluator.operators.START_BRACKETS
+                    or self.__tokens[i-1].item in evaluator.operators.OPERATORS
+                    or self.__tokens[i-1].item in evaluator.operators.LINE_BREAK):
+                # Set the operator to is unitary counterpart
                 if self.__tokens[i].item == '-':
                     self.__tokens[i].item = 'negate'
                 elif self.__tokens[i].item == '+':
                     self.__tokens[i].item = 'ignore'
 
     def __break_lines(self):
+        """Breaks the up the tokens into lines
+
+        Arguments:
+            None
+
+        Returns:
+            None
+        """
         self.__lines = [[]]
         for token in self.__tokens:
             if token.item in evaluator.operators.LINE_BREAK:
@@ -351,8 +436,17 @@ class Parser:
 
     @staticmethod
     def __get_preblock(index, tokens):
+        """Gets the index of the block preceding the current token
+
+        Arguments:
+            index: int -- The index of the current token
+
+        Returns:
+            pre_block_index: int -- The index of the start of the block
+        """
         pre_block_index = index - 1
         bracket_level = 0
+
         while (bracket_level > 0 or (
                 tokens[pre_block_index].item not in evaluator.operators.INFIX_BINARY_SCORE
                 and tokens[pre_block_index].item not in evaluator.operators.START_BRACKETS)
@@ -369,11 +463,20 @@ class Parser:
 
     @staticmethod
     def __get_postblock(index, tokens):
+        """Gets the index of the block succeeding the current token
+
+        Arguments:
+            index: int -- The index of the current token
+
+        Returns:
+            post_block_index: int -- The index of the end of the block
+        """
         bracket_level = 0
         post_block_index = index + 1
         while post_block_index < len(tokens) and (bracket_level > 0 or (
                 tokens[post_block_index].item not in evaluator.operators.INFIX_BINARY_SCORE
-                and (tokens[post_block_index].item not in evaluator.operators.END_BRACKETS or tokens[index].item in evaluator.operators.INFIX_BINARY_SCORE) )
+                and (tokens[post_block_index].item not in evaluator.operators.END_BRACKETS
+                     or tokens[index].item in evaluator.operators.INFIX_BINARY_SCORE))
         ):
             if tokens[post_block_index].item in evaluator.operators.END_BRACKETS:
                 bracket_level -= 1
@@ -395,23 +498,29 @@ class Parser:
                 if token.item in evaluator.operators.INFIX_BINARY_SCORE:
                     pre_block_index = self.__get_preblock(index, tokens)
                     post_block_index = self.__get_postblock(index, tokens)
-
-                    tokens[index] = self.__Token(')')  # End of partial application
-                    tokens.insert(post_block_index, self.__Token(')'))  # End of full application
+                    # End of partial application
+                    tokens[index] = self.__Token(')')
+                    # End of full application
+                    tokens.insert(post_block_index, self.__Token(')'))
 
                     tokens.insert(pre_block_index, token)
-                    tokens.insert(pre_block_index, self.__Token('('))  # Start of partial application
-                    tokens.insert(pre_block_index, self.__Token('('))  # Start of full application
+                    # Start of partial application
+                    tokens.insert(pre_block_index, self.__Token('('))
+                    # Start of full application
+                    tokens.insert(pre_block_index, self.__Token('('))
                 elif token.item in evaluator.operators.POSTFIX_UNARY_SCORE:
                     pre_block_index = self.__get_preblock(index, tokens)
                     tokens.insert(index, self.__Token(')'))  # Application end
 
                     tokens.insert(pre_block_index, token)
-                    tokens.insert(pre_block_index, self.__Token('('))  # Application start
+                    # Application start
+                    tokens.insert(pre_block_index, self.__Token('('))
                 elif token.item not in evaluator.operators.BRACKETS:
                     post_block_index = self.__get_postblock(index, tokens)
-                    tokens.insert(post_block_index, self.__Token(')'))  # End of application
-                    tokens.insert(index, self.__Token('('))  # Start of application
+                    # End of application
+                    tokens.insert(post_block_index, self.__Token(')'))
+                    # Start of application
+                    tokens.insert(index, self.__Token('('))
 
     def __create_expression_trees(self):
         for tokens in self.__lines:
@@ -458,9 +567,12 @@ class Parser:
     def __compress_tree(tree):
         for node in tree:
             if node.is_function_call():
-                while node.parameter.is_function_call() and node.parameter.function is None:
+                while node.parameter.is_function_call() \
+                        and node.parameter.function is None:
                     node.set_parameter(node.parameter.parameter)
-                while node.function is not None and node.function.is_function_call() and node.function.function is None:
+                while node.function is not None \
+                        and node.function.is_function_call() \
+                        and node.function.function is None:
                     node.set_function(node.function.parameter)
         root = tree.get_root()
         if root.function is None:
@@ -547,8 +659,10 @@ class PriorityQueue:
             del self.__heap[self.n]
             self.n -= 1
             i = 1
-            while (i << 1) | 1 <= self.n and (self.__heap[i][0] < self.__heap[i << 1][0]
-                                              or self.__heap[i][0] < self.__heap[(i << 1) | 1][0]):
+            while (i << 1) | 1 <= self.n and (self.__heap[i][0] <
+                                              self.__heap[i << 1][0]
+                                              or self.__heap[i][0] <
+                                              self.__heap[(i << 1) | 1][0]):
                 if self.__heap[i << 1][0] > self.__heap[(i << 1) | 1][0]:
                     swap(self.__heap, i, i << 1)
                     i <<= 1
